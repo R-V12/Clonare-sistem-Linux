@@ -569,3 +569,4 @@ cunoscute.
 Aplicația nu trebuie să suprascrie automat utilizatori, fișiere sau configurări existente
 pe destinație. Orice suprascriere trebuie să fie rezultatul unei confirmări explicite a
 utilizatorului.
+
