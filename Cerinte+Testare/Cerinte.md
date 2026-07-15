@@ -1,17 +1,21 @@
-# DOCUMENT DE CERINȚE SOFTWARE
+# DOCUMENT DE CERINȚE - Clonare sistem Linux
 
-## Clonare sistem Linux
+Sd. Cap. Vlădescu Rareș - C 112-C
 
-Student: Vlădescu Rareș
-Proiect: „Clonare" sistem Linux
-Repository: https://github.com/R-V12/Clonare-sistem-Linux
+
+Tema Proiect: Clonare sistem Linux
+
+
+Repo: https://github.com/R-V12/Clonare-sistem-Linux
+
+
 
 # Capitolul 1: Introducere
 
 ## 1.1 Scopul proiectului
 
 Aplicația este o colecție de scripturi Bash care replică starea unui sistem Linux
-(**sursă**) pe alt sistem Linux (**destinație**). Scriptul se poate rula de pe oricare
+(sursă) pe alt sistem Linux (destinație). Scriptul se poate rula de pe oricare
 dintre cele două sisteme. El colectează starea ambelor mașini, calculează diferențele,
 le afișează și, numai după confirmarea utilizatorului, aplică modificările pe destinație.
 
@@ -68,14 +72,14 @@ hash-urile parolelor și grupurile.
 
 ## 2.1 Fluxul aplicației
 
-1. Citirea configurației (mod de rulare, adresa celeilalte mașini, categorii).
-2. Stabilirea conexiunii SSH.
-3. Colectarea stării de pe ambele sisteme.
-4. Calculul diferențelor.
-5. Afișarea diferențelor.
-6. Interogarea utilizatorului, pe categorii.
-7. Aplicarea modificărilor confirmate.
-8. Jurnalizarea.
+1. Citirea configurației (mod de rulare, adresa celeilalte mașini, categorii)
+2. Stabilirea conexiunii SSH
+3. Colectarea stării de pe ambele sisteme
+4. Compararea listelor de pe cele doua sisteme
+5. Afișarea rezultatelor, pe categorii
+6. Interogarea utilizatorului, pe categorii
+7. Aplicarea modificărilor confirmate
+8. Jurnalizarea/Noteaza intr-un fisier ce a facut pe parcursul intregului script
 
 ## 2.2 Ordinea operațiilor
 
@@ -93,30 +97,22 @@ Diferențele se calculează în ambele direcții și rezultă trei categorii:
 * **doar pe destinație** — pot fi șterse;
 * **comune** — nu se recreează; diferențele de atribute se raportează.
 
-Exemplu, pentru sursă cu `user1, user2, user3` și destinație cu `user1, user2, user4`:
+Ex: pentru sursa cu `user1, user2, user3` si destinatie cu `user1, user2, user4`:
 
-```text
-Diferențe utilizatori:
-  Lipsă pe destinație:  user3
-  Doar pe destinație:   user4
+```
+Diferente utilizatori:
+  Lipsa pe destinatie:  user3
+  Doar pe destinatie:   user4
   Comuni:               user1, user2
 
-Clonez utilizatorii lipsă? [d/n] d
-Șterg utilizatorii care există doar pe destinație? [d/n] n
+Clonez utilizatorii lipsa? [d/n] d
+Sterg utilizatorii care exista doar pe destinatie? [d/n] n
 
-Se creează: user3
-user4: păstrat (refuzat de utilizator)
-user1, user2: existenți, nemodificați
+Se creeaza: user3
+user4: pastrat (refuzat de utilizator)
+user1, user2: existenti, nemodificati
 ```
-
-## 2.4 Exemple de utilizare
-
-```bash
-./scripts/clonare.sh --mod sursa --tinta 192.168.56.20 --user rares
-./scripts/clonare.sh --config config/clonare.conf
-```
-
-## 2.5 Platforma și mediul de lucru
+## 2.4 Platforma și mediul de lucru
 
 Aplicația rulează pe Linux Mint (bazat pe Debian). Utilitare folosite: Bash, coreutils,
 `useradd`/`groupadd`/`chpasswd`/`getent`, `dpkg`/`apt`, `ssh`, `rsync`, `crontab`.
@@ -124,13 +120,12 @@ Aplicația rulează pe Linux Mint (bazat pe Debian). Utilitare folosite: Bash, c
 Sunt necesare două mașini virtuale Linux Mint (sursă și destinație), conectate în rețea
 (Host-Only sau Internal Network), cu SSH configurat pe bază de chei.
 
-```bash
+```
 sudo apt install -y git openssh-server openssh-client rsync
 ssh-keygen -t ed25519
 ssh-copy-id user@ip_destinatie
-ssh user@ip_destinatie "hostname"    # verificare: trebuie să răspundă fără parolă
+ssh user@ip_destinatie "hostname"
 ```
-
 ## 2.6 Constrângeri
 
 **Date.** Citirea utilizatorilor și a hash-urilor din `/etc/shadow` necesită root pe sursă.
@@ -166,7 +161,7 @@ componentelor nu depind de modul de rulare.
 
 ### CF-02 – Parametri din linia de comandă
 
-```text
+```
 --mod       (sursa | destinatie)
 --tinta     (adresa celeilalte mașini)
 --user      (utilizatorul SSH)
@@ -206,7 +201,7 @@ Aplicația identifică fișierele din home-directory-uri și din directoarele sp
 
 Aplicația extrage cronjob-urile utilizatorilor (`crontab -l`).
 
-### CF-09 – Calculul diferențelor
+### CF-09 – Calculul diferențelor/Identificarea clara a
 
 Pentru fiecare categorie, aplicația determină: elementele prezente pe sursă și absente pe
 destinație, elementele prezente pe destinație și absente pe sursă, elementele comune.
@@ -333,7 +328,10 @@ privilegiilor, comandă externă indisponibilă, opțiune necunoscută, conflict
 
 Scripturile returnează `0` la succes și un cod diferit de `0` la eșec.
 
+
+
 ## 3.2 Cerințe nefuncționale
+
 
 ### CNF-01 – Compatibilitate
 Aplicația rulează pe o distribuție Linux bazată pe Debian (platformă de test: Linux Mint).
@@ -353,49 +351,18 @@ ca atare.
 Autentificare SSH pe bază de chei. Operațiile privilegiate cu `sudo`. Hash-urile de parolă
 nu se afișează și nu se scriu în jurnal. Parolele nu se scriu în cod.
 
-### CNF-06 – Idempotență
-Pentru aceeași stare a celor două sisteme, aplicația identifică aceleași diferențe. Rularea
-repetată nu produce modificări suplimentare.
-
-### CNF-07 – Gestionarea căilor
-Scripturile procesează corect căile cu spații și caractere speciale. Variabilele cu căi se
-folosesc între ghilimele.
-
-### CNF-08 – Portabilitate
-Fără căi fixe specifice unei mașini. Adresele, utilizatorii și directoarele se configurează
-dinamic.
-
-### CNF-09 – Ușurința utilizării
-Parametri cu nume descriptive. Mesaje despre progresul operației.
-
-### CNF-10 – Mesaje de eroare
+### CNF-6 – Mesaje de eroare
 Mesajele indică operația eșuată, elementul implicat și cauza probabilă.
 
-### CNF-11 – Jurnalizare
-Format ușor de citit, cu dată, oră și nivel (`INFO`, `WARNING`, `ERROR`).
+### CNF-7 – Jurnalizare
+Format ușor de citit, cu dată, oră și nivel in fisier (`INFO`, `WARNING`, `ERROR`).
 
-### CNF-12 – Configurabilitate
+### CNF-8 – Configurabilitate
 Fiecare categorie poate fi activată sau dezactivată:
 
-```text
+```
 CLONE_PACHETE=true
 CLONE_UTILIZATORI=true
 CLONE_HOME=true
 CLONE_CRON=true
 ```
-
-### CNF-13 – Siguranța operațiilor
-Operațiile de scriere, creare sau ștergere se execută numai asupra unor căi și valori
-validate, niciodată asupra unor variabile vide.
-
-### CNF-14 – Controlul versiunilor
-Codul se păstrează în Git, cu commituri descriptive.
-
-### CNF-15 – Documentare
-Repository-ul conține un `README.md` cu scopul proiectului, dependențele, exemplele de
-utilizare și limitările cunoscute.
-
-### CNF-16 – Protejarea datelor existente
-Aplicația nu suprascrie și nu șterge automat fișiere, utilizatori sau configurări de pe
-destinație. Orice suprascriere și orice ștergere sunt rezultatul confirmării explicite a
-categoriei respective.

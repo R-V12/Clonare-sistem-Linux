@@ -1,81 +1,82 @@
-# DOCUMENT DE TESTARE
+# DOCUMENT DE TESTARE - Clonare sistem Linux
 
-## Clonare sistem Linux
 
-Student: Vlădescu Rareș
-Repository: https://github.com/R-V12/Clonare-sistem-Linux
+Sd. Cap. Vlădescu Rareș - C 112-C
+
+
+Repo: https://github.com/R-V12/Clonare-sistem-Linux
 
 ## Mediul de testare
 
-Două mașini virtuale Linux Mint, **sursă** și **destinație**, conectate în rețea
+Două mașini virtuale Linux Mint, sursă și destinație, conectate în rețea
 (Host-Only), cu SSH pe bază de chei configurat între ele.
 
 Verificare înainte de testare:
 
-```bash
-ssh user@ip_destinatie "hostname"    # trebuie să răspundă fără parolă
+```
+ssh user@ip_destinatie "hostname" 
 ```
 
-Fiecare test conține: **ce verifică**, **pașii** și **rezultatul așteptat**. Coloana
+Fiecare test conține: ce verifică, pasii și rezultatul așteptat. Coloana
 *Cerință* indică cerința validată din documentul de cerințe.
 
 ---
 
 # 1. Teste pentru parametri
 
-## TP-01 — Parametri corecți | CF-02
+## TP-01 — Parametri corecți
 
 **Pași:** rulez `./clonare.sh --mod sursa --tinta <ip> --user rares`
 
 **Rezultat:** scriptul pornește, se conectează și afișează diferențele.
 
-## TP-02 — Parametru obligatoriu lipsă | CF-02, CF-25
+## TP-02 — Parametru obligatoriu lipsă
 
 **Pași:** rulez `./clonare.sh --mod sursa` (fără `--tinta`)
 
 **Rezultat:** mesaj de eroare care indică parametrul lipsă, cod de ieșire diferit de `0`,
 nicio modificare pe niciun sistem.
 
-## TP-03 — Parametru necunoscut | CF-25
+## TP-03 — Parametru necunoscut
 
 **Pași:** rulez `./clonare.sh --xyz`
 
 **Rezultat:** mesaj „opțiune necunoscută", scriptul se oprește, cod diferit de `0`.
 
-## TP-04 — Valoare invalidă pentru mod | CF-01, CF-25
+## TP-04 — Valoare invalidă pentru mod 
 
 **Pași:** rulez `./clonare.sh --mod altceva --tinta <ip>`
 
 **Rezultat:** mesaj de eroare care indică valorile acceptate (`sursa` / `destinatie`).
 
-## TP-05 — Fișier de configurare | CF-03
+## TP-05 — Fișier de configurare 
 
 **Pași:** creez `clonare.conf` cu mod, țintă și user, apoi rulez
 `./clonare.sh --config clonare.conf`
 
 **Rezultat:** scriptul citește opțiunile din fișier și pornește identic ca la TP-01.
 
-## TP-06 — Prioritatea parametrilor | CF-02
+## TP-06 — Prioritatea parametrilor 
 
 **Pași:** în `clonare.conf` pun `TINTA=192.168.56.30`, apoi rulez
 `./clonare.sh --config clonare.conf --tinta 192.168.56.20`
 
 **Rezultat:** scriptul se conectează la `.20` (parametrul din linia de comandă câștigă).
 
-## TP-07 — Fișier de configurare inexistent | CF-25
+## TP-07 — Fișier de configurare inexistent 
 
 **Pași:** rulez `./clonare.sh --config /tmp/nu_exista.conf`
 
 **Rezultat:** mesaj de eroare care indică fișierul lipsă, cod diferit de `0`.
 
-## TP-08 — Mesajul de ajutor | CF-24
-
+## TP-08 — Mesajul de ajutor
+ 
 **Pași:** rulez `./clonare.sh --help`
 
 **Rezultat:** se afișează parametrii disponibili și exemplele; cod de ieșire `0`;
 nicio conexiune, nicio modificare.
 
-## TP-09 — Selectarea categoriilor | CF-02, CF-11
+## TP-09 — Selectarea categoriilor
 
 **Pași:** rulez `./clonare.sh --mod sursa --tinta <ip> --user rares --categorii pachete`
 
@@ -92,34 +93,34 @@ ignorate.
 
 # 2. Teste pentru limite și erori
 
-## TL-01 — Adresă IP inexistentă | CF-04, CF-25
+## TL-01 — Adresă IP inexistentă
 
 **Pași:** rulez cu `--tinta 192.168.56.99` (nicio mașină acolo)
 
 **Rezultat:** mesaj de eroare clar despre conexiunea eșuată, scriptul se oprește, nimic
 modificat pe niciun sistem.
 
-## TL-02 — SSH oprit pe destinație | CF-04, CF-25
+## TL-02 — SSH oprit pe destinație
 
 **Pași:** `sudo systemctl stop ssh` pe destinație, apoi rulez scriptul
 
 **Rezultat:** eroare de conexiune, oprire controlată, cod diferit de `0`.
 
-## TL-03 — Cheie SSH lipsă | CF-04
+## TL-03 — Cheie SSH lipsă
 
 **Pași:** redenumesc temporar `~/.ssh/id_ed25519`, apoi rulez scriptul
 
 **Rezultat:** scriptul nu se blochează cerând parolă interactiv; raportează eșecul
 autentificării și se oprește.
 
-## TL-04 — Lipsa privilegiilor | CF-14, CF-25
+## TL-04 — Lipsa privilegiilor
 
 **Pași:** rulez scriptul fără `sudo`, cu clonarea utilizatorilor confirmată
 
 **Rezultat:** mesaj care indică lipsa privilegiilor pentru citirea `/etc/shadow` sau pentru
 `useradd`; nu se raportează succes fals.
 
-## TL-05 — Conflict de UID | CF-14, CF-25
+## TL-05 — Conflict de UID
 
 **Pași:** pe destinație creez un user oarecare cu UID 1001, iar pe sursă `user3` are tot
 UID 1001. Rulez scriptul și confirm clonarea utilizatorilor.
@@ -127,21 +128,21 @@ UID 1001. Rulez scriptul și confirm clonarea utilizatorilor.
 **Rezultat:** `useradd -u 1001` eșuează; eroarea e raportată și scriptul continuă cu
 restul, fără să se oprească brusc.
 
-## TL-06 — Pachet indisponibil | CF-22
+## TL-06 — Pachet indisponibil
 
 **Pași:** pe sursă instalez un pachet dintr-un repository pe care destinația nu îl are.
 Rulez scriptul și confirm clonarea pachetelor.
 
 **Rezultat:** pachetul e raportat ca neinstalabil; restul pachetelor se instalează normal.
 
-## TL-07 — Căi cu spații | CNF-07
+## TL-07 — Căi cu spații
 
 **Pași:** creez pe sursă `/home/user3/Documente vechi/nota importanta.txt`, apoi clonez
 home-ul lui `user3`
 
 **Rezultat:** fișierul ajunge pe destinație cu numele intact, fără erori de parsare.
 
-## TL-08 — Utilizator fără drept de ștergere | CF-21
+## TL-08 — Utilizator fără drept de ștergere
 
 **Pași:** confirm ștergerea utilizatorilor prezenți doar pe destinație, într-un scenariu în
 care userul conectat prin SSH nu există pe sursă
@@ -149,14 +150,14 @@ care userul conectat prin SSH nu există pe sursă
 **Rezultat:** userul conectat **nu** e șters; e raportat ca protejat; conexiunea rămâne
 activă.
 
-## TL-09 — Cont de sistem în lista de șters | CF-21
+## TL-09 — Cont de sistem în lista de șters
 
 **Pași:** verific ce apare în lista „doar pe destinație" când destinația are conturi de
 sistem pe care sursa nu le are
 
 **Rezultat:** conturile cu UID < 1000 nu apar în listă și nu sunt propuse pentru ștergere.
 
-## TL-10 — Lipsa unei comenzi externe | CF-25
+## TL-10 — Lipsa unei comenzi externe
 
 **Pași:** redenumesc temporar `rsync` pe destinație, apoi confirm clonarea home-urilor
 
@@ -166,7 +167,7 @@ sistem pe care sursa nu le are
 
 # 3. Teste funcționale
 
-## TF-01 — Clonarea unui pachet lipsă | CF-12
+## TF-01 — Clonarea unui pachet lipsă
 
 **Pași:**
 1. Pe sursă: `sudo apt install -y htop`. Pe destinație verific că `htop` nu e instalat.
@@ -175,7 +176,7 @@ sistem pe care sursa nu le are
 
 **Rezultat:** `htop` e instalat pe destinație.
 
-## TF-02 — Pachet doar pe destinație nu se dezinstalează | CF-21
+## TF-02 — Pachet doar pe destinație nu se dezinstalează
 
 **Pași:**
 1. Pe destinație instalez `nano`; pe sursă nu e instalat.
@@ -184,17 +185,17 @@ sistem pe care sursa nu le are
 
 **Rezultat:** `nano` e raportat ca fiind doar pe destinație, dar rămâne instalat.
 
-## TF-03 — Clonarea unui utilizator lipsă | CF-14
+## TF-03 — Clonarea unui utilizator lipsă
 
 **Pași:**
 1. Pe sursă: `sudo useradd -m -u 1001 -s /bin/bash user3`
 2. Rulez scriptul, confirm clonarea utilizatorilor.
 3. Pe destinație: `id user3`
 
-**Rezultat:** `user3` există pe destinație cu **același UID (1001)**, același shell și
+**Rezultat:** `user3` există pe destinație cu același UID (1001), același shell și
 același home.
 
-## TF-04 — Clonarea grupurilor secundare | CF-14
+## TF-04 — Clonarea grupurilor secundare
 
 **Pași:**
 1. Pe sursă: `sudo usermod -aG sudo user3`
@@ -203,7 +204,7 @@ același home.
 
 **Rezultat:** `user3` apare în grupul `sudo` și pe destinație.
 
-## TF-05 — Clonarea parolei | CF-14
+## TF-05 — Clonarea parolei
 
 **Pași:**
 1. Pe sursă setez o parolă cunoscută pentru `user3`.
@@ -212,17 +213,17 @@ același home.
 
 **Rezultat:** autentificarea reușește — hash-ul a fost transferat corect.
 
-## TF-06 — Utilizatorii comuni nu se modifică | CF-19, CF-20
+## TF-06 — Utilizatorii comuni nu se modifică
 
 **Pași:**
 1. `user1` există pe ambele. Pe destinație îi modific shell-ul în `/bin/sh`.
 2. Rulez scriptul și clonez tot.
 3. Pe destinație: `getent passwd user1`
 
-**Rezultat:** diferența de shell e **raportată**, dar `user1` rămâne cu `/bin/sh` — nu e
+**Rezultat:** diferența de shell e raportată, dar `user1` rămâne cu `/bin/sh` — nu e
 modificat.
 
-## TF-07 — Ștergerea unui utilizator doar pe destinație (confirmată) | CF-21
+## TF-07 — Ștergerea unui utilizator doar pe destinație
 
 **Pași:**
 1. Pe destinație: `sudo useradd -m user4`; pe sursă nu există.
@@ -231,13 +232,13 @@ modificat.
 
 **Rezultat:** `user4` nu mai există.
 
-## TF-08 — Ștergere refuzată | CF-21
+## TF-08 — Ștergere refuzată 
 
 **Pași:** același scenariu ca TF-07, dar refuz ștergerea (`n`)
 
 **Rezultat:** `user4` rămâne, cu home-ul și parola intacte.
 
-## TF-09 — Clonarea home-directory-ului | CF-15
+## TF-09 — Clonarea home-directory-ului
 
 **Pași:**
 1. Pun fișiere în `/home/user3` pe sursă, cu permisiuni `644`.
@@ -246,14 +247,14 @@ modificat.
 
 **Rezultat:** fișierele există, cu același conținut, permisiuni `644` și owner `user3`.
 
-## TF-10 — Ordinea operațiilor | CF-18
+## TF-10 — Ordinea operațiilor
 
 **Pași:** clonez într-o singură rulare atât `user3`, cât și home-ul lui
 
 **Rezultat:** fișierele din home apar deținute de `user3`, nu de un UID numeric fără nume —
 ceea ce confirmă că userul a fost creat înaintea transferului.
 
-## TF-11 — Suprascrierea fișierelor diferite | CF-19
+## TF-11 — Suprascrierea fișierelor diferite
 
 **Pași:**
 1. Directorul `/opt/test` există pe ambele; fișierul `conf.txt` are conținut diferit.
@@ -262,7 +263,7 @@ ceea ce confirmă că userul a fost creat înaintea transferului.
 
 **Rezultat:** fișierul de pe destinație a fost înlocuit cu versiunea de pe sursă.
 
-## TF-12 — Clonarea unui cronjob | CF-17
+## TF-12 — Clonarea unui cronjob
 
 **Pași:**
 1. Pe sursă adaug un cronjob pentru `user3`.
@@ -271,7 +272,7 @@ ceea ce confirmă că userul a fost creat înaintea transferului.
 
 **Rezultat:** cronjob-ul apare pe destinație.
 
-## TF-13 — Afișarea diferențelor înainte de orice modificare | CF-09, CF-10
+## TF-13 — Afișarea diferențelor înainte de orice modificare
 
 **Pași:**
 1. Pregătesc o stare cunoscută: sursa are în plus 1 pachet și 1 user; destinația are în
@@ -282,7 +283,7 @@ ceea ce confirmă că userul a fost creat înaintea transferului.
 **Rezultat:** lista afișată conține exact elementele pregătite, în cele trei categorii
 (lipsă / doar pe destinație / comune); niciun sistem nu e modificat.
 
-## TF-14 — Respectarea alegerii utilizatorului | CF-11
+## TF-14 — Respectarea alegerii utilizatorului
 
 **Pași:**
 1. Rulez scriptul.
@@ -291,7 +292,7 @@ ceea ce confirmă că userul a fost creat înaintea transferului.
 
 **Rezultat:** pachetele sunt instalate, utilizatorii nu sunt creați.
 
-## TF-15 — Rularea repetată (idempotență) | CNF-06
+## TF-15 — Rularea repetată (idempotență)
 
 **Pași:**
 1. Rulez scriptul și clonez tot.
@@ -300,7 +301,7 @@ ceea ce confirmă că userul a fost creat înaintea transferului.
 **Rezultat:** la a doua rulare nu se raportează diferențe de clonat; nu se execută nicio
 modificare.
 
-## TF-16 — Jurnalul | CF-23
+## TF-16 — Jurnalul
 
 **Pași:**
 1. Rulez o clonare completă.
