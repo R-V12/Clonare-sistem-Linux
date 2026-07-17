@@ -17,10 +17,12 @@ log() {
 info()    { log "INFO   " "$@"; }
 atentie() { log "WARNING" "$@"; }
 eroare()  { log "ERROR  " "$@" >&2; }
+
 opreste() {
     eroare "$@"
     exit 1
 }
+
 ruleaza() {
     local unde="$1"
     shift
@@ -31,6 +33,7 @@ ruleaza() {
         ssh -o BatchMode=yes "${USER_SSH}@${TINTA}" "$@"
     fi
 }
+
 verifica_conexiunea() {
     info "Verific conexiunea SSH catre ${USER_SSH}@${TINTA}"
 
@@ -44,6 +47,7 @@ verifica_conexiunea() {
     nume=$(ssh -o BatchMode=yes "${USER_SSH}@${TINTA}" "hostname")
     info "Conexiune stabilita cu: $nume"
 }
+
 verifica_comanda() {
     local unde="$1"
     local comanda="$2"
@@ -52,6 +56,7 @@ verifica_comanda() {
         opreste "Comanda '$comanda' nu este disponibila pe sistemul $unde."
     fi
 }
+
 confirma() {
     local intrebare="$1"
     local raspuns
