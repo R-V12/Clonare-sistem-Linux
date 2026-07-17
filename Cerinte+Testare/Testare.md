@@ -292,7 +292,7 @@ ceea ce confirmă că userul a fost creat înaintea transferului.
 
 **Rezultat:** pachetele sunt instalate, utilizatorii nu sunt creați.
 
-## TF-15 — Rularea repetată (idempotență)
+## TF-15 — Rularea repetată
 
 **Pași:**
 1. Rulez scriptul și clonez tot.
