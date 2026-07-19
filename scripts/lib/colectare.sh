@@ -12,6 +12,18 @@ colecteaza_utilizatori() {
         | sort
 }
 
+linie_passwd() {
+    local unde="$1"
+    local user="$2"
+    ruleaza "$unde" getent passwd "$user"
+}
+
+linie_shadow() {
+    local unde="$1"
+    local user="$2"
+    ruleaza_sudo "$unde" getent shadow "$user"
+}
+
 atribute_utilizator() {
     local unde="$1"
     local user="$2"
@@ -23,9 +35,7 @@ grupuri_secundare() {
     local unde="$1"
     local user="$2"
     ruleaza "$unde" id -nG "$user" 2>/dev/null \
-        | tr ' ' '\n' \
-        | tail -n +2 \
-        | paste -sd ',' -
+        | tr ' ' '\n' | tail -n +2 | paste -sd ',' -
 }
 
 colecteaza_grupuri() {
@@ -38,24 +48,18 @@ colecteaza_grupuri() {
 colecteaza_cronjoburi() {
     local unde="$1"
     local user="$2"
-    ruleaza "$unde" sudo crontab -l -u "$user" 2>/dev/null \
-        | grep -v '^[[:space:]]*#' \
-        | grep -v '^[[:space:]]*$' \
-        | sort
-}
-
-colecteaza_fisiere() {
-    local unde="$1"
-    local director="$2"
-
-    ruleaza "$unde" sudo find "$director" -type f -print0 2>/dev/null \
-        | ruleaza "$unde" sudo xargs -0 -r sha256sum 2>/dev/null \
-        | sed "s| $director/| |" \
-        | sort -k2
+    ruleaza_sudo "$unde" crontab -l -u "$user" 2>/dev/null \
+        | grep -v '^[[:space:]]*#' | grep -v '^[[:space:]]*$' | sort
 }
 
 home_utilizator() {
     local unde="$1"
     local user="$2"
     ruleaza "$unde" getent passwd "$user" | cut -d: -f6
+}
+
+linie_grup() {
+    local unde="$1"
+    local grup="$2"
+    ruleaza "$unde" getent group "$grup"
 }

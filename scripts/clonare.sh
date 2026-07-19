@@ -1,11 +1,13 @@
 #!/bin/bash
 
-set -euo pipefail
+set -uo pipefail
 
 DIR_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$DIR_SCRIPT/lib/comun.sh"
 source "$DIR_SCRIPT/lib/colectare.sh"
+source "$DIR_SCRIPT/lib/comparare.sh"
+source "$DIR_SCRIPT/lib/aplicare.sh"
 
 MOD=""
 TINTA=""
@@ -23,82 +25,58 @@ UTILIZARE
     ./clonare.sh --config <fisier>
 
 PARAMETRI
-    --mod        Rolul masinii pe care rulezi acum:
-                   sursa      - masina aceasta este referinta
-                   destinatie - masina aceasta va fi modificata
+    --mod        Rolul masinii pe care rulezi acum: sursa | destinatie
     --tinta      Adresa IP a celeilalte masini
     --user       Utilizatorul folosit pentru conexiunea SSH
-    --config     Fisier de configurare (parametrii din linia de comanda
-                 au prioritate fata de valorile din fisier)
-    --categorii  Ce se colecteaza si compara, separat prin virgula
-                 Implicit: pachete,utilizatori,home,cron
+    --config     Fisier de configurare (parametrii au prioritate)
+    --categorii  Ce se cloneaza: pachete,utilizatori,home,cron
     --help       Afiseaza acest mesaj
 
 EXEMPLE
     ./clonare.sh --mod sursa --tinta 192.168.56.102 --user vladescu
     ./clonare.sh --config ../config/clonare.conf
-    ./clonare.sh --mod sursa --tinta 192.168.56.102 --user vladescu --categorii pachete
 
 OBSERVATII
     Aplicatia afiseaza diferentele si cere o singura confirmare inainte de a
-    modifica ceva. La refuz, niciun sistem nu este modificat.
+    modifica ceva. La refuz, niciun sistem nu este modificat. Destinatia devine
+    identica cu sursa la categoriile clonate.
 EOF
 }
 
 parseaza_parametri() {
     while [ $# -gt 0 ]; do
         case "$1" in
-            --mod)
-                [ $# -ge 2 ] || opreste "Parametrul --mod necesita o valoare."
-                MOD="$2"; shift 2 ;;
-            --tinta)
-                [ $# -ge 2 ] || opreste "Parametrul --tinta necesita o valoare."
-                TINTA="$2"; shift 2 ;;
-            --user)
-                [ $# -ge 2 ] || opreste "Parametrul --user necesita o valoare."
-                USER_SSH="$2"; shift 2 ;;
-            --config)
-                [ $# -ge 2 ] || opreste "Parametrul --config necesita o valoare."
-                CONFIG="$2"; shift 2 ;;
-            --categorii)
-                [ $# -ge 2 ] || opreste "Parametrul --categorii necesita o valoare."
-                CATEGORII="$2"; shift 2 ;;
-            --help|-h)
-                ajutor; exit 0 ;;
-            *)
-                eroare "Optiune necunoscuta: $1"
-                echo "Foloseste --help pentru lista parametrilor." >&2
-                exit 1 ;;
+            --mod)        [ $# -ge 2 ] || opreste "--mod necesita o valoare."; MOD="$2"; shift 2 ;;
+            --tinta)      [ $# -ge 2 ] || opreste "--tinta necesita o valoare."; TINTA="$2"; shift 2 ;;
+            --user)       [ $# -ge 2 ] || opreste "--user necesita o valoare."; USER_SSH="$2"; shift 2 ;;
+            --config)     [ $# -ge 2 ] || opreste "--config necesita o valoare."; CONFIG="$2"; shift 2 ;;
+            --categorii)  [ $# -ge 2 ] || opreste "--categorii necesita o valoare."; CATEGORII="$2"; shift 2 ;;
+            --help|-h)    ajutor; exit 0 ;;
+            *) eroare "Optiune necunoscuta: $1"; echo "Foloseste --help." >&2; exit 1 ;;
         esac
     done
 }
 
 citeste_config() {
     local fisier="$1"
-
     [ -f "$fisier" ] || opreste "Fisierul de configurare nu exista: $fisier"
     [ -r "$fisier" ] || opreste "Fisierul de configurare nu poate fi citit: $fisier"
-
     source "$fisier"
-
     [ -n "${CONF_MOD:-}" ]       && MOD="$CONF_MOD"
     [ -n "${CONF_TINTA:-}" ]     && TINTA="$CONF_TINTA"
     [ -n "${CONF_USER:-}" ]      && USER_SSH="$CONF_USER"
     [ -n "${CONF_CATEGORII:-}" ] && CATEGORII="$CONF_CATEGORII"
     [ -n "${CONF_JURNAL:-}" ]    && JURNAL="$CONF_JURNAL"
-
     return 0
 }
 
 valideaza() {
-    [ -n "$MOD" ]      || opreste "Parametrul --mod este obligatoriu. Vezi --help."
-    [ -n "$TINTA" ]    || opreste "Parametrul --tinta este obligatoriu. Vezi --help."
-    [ -n "$USER_SSH" ] || opreste "Parametrul --user este obligatoriu. Vezi --help."
-
+    [ -n "$MOD" ]      || opreste "--mod este obligatoriu. Vezi --help."
+    [ -n "$TINTA" ]    || opreste "--tinta este obligatoriu. Vezi --help."
+    [ -n "$USER_SSH" ] || opreste "--user este obligatoriu. Vezi --help."
     if [ "$MOD" != "sursa" ] && [ "$MOD" != "destinatie" ]; then
         opreste "Valoare invalida pentru --mod: '$MOD'. Valori acceptate: sursa | destinatie"
     fi
-
     if ! echo "$TINTA" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'; then
         opreste "Adresa invalida pentru --tinta: '$TINTA'. Format asteptat: x.x.x.x"
     fi
@@ -106,11 +84,9 @@ valideaza() {
 
 stabileste_rolurile() {
     if [ "$MOD" = "sursa" ]; then
-        SURSA="local"
-        DESTINATIE="remote"
+        SURSA="local"; DESTINATIE="remote"
     else
-        SURSA="remote"
-        DESTINATIE="local"
+        SURSA="remote"; DESTINATIE="local"
     fi
     info "Mod: $MOD  (sursa=$SURSA, destinatie=$DESTINATIE)"
 }
@@ -121,40 +97,78 @@ categorie_activa() {
 
 main() {
     parseaza_parametri "$@"
-
     if [ -n "$CONFIG" ]; then
         citeste_config "$CONFIG"
         parseaza_parametri "$@"
     fi
-
     valideaza
 
     mkdir -p "$(dirname "$JURNAL")"
     info "=== Clonare pornita ==="
-
     stabileste_rolurile
-
     verifica_conexiunea
     verifica_comanda "$SURSA" rsync
     verifica_comanda "$DESTINATIE" rsync
 
+    # --- COLECTARE (CF-05..CF-08) ---
     if categorie_activa pachete; then
-        info "Colectez pachetele de pe sursa"
         colecteaza_pachete "$SURSA" > /tmp/pachete_sursa.txt
-        info "Colectez pachetele de pe destinatie"
         colecteaza_pachete "$DESTINATIE" > /tmp/pachete_dest.txt
-        info "Pachete: $(wc -l < /tmp/pachete_sursa.txt) pe sursa, $(wc -l < /tmp/pachete_dest.txt) pe destinatie"
     fi
-
     if categorie_activa utilizatori; then
-        info "Colectez utilizatorii de pe sursa"
         colecteaza_utilizatori "$SURSA" > /tmp/useri_sursa.txt
-        info "Colectez utilizatorii de pe destinatie"
         colecteaza_utilizatori "$DESTINATIE" > /tmp/useri_dest.txt
-        info "Utilizatori: $(wc -l < /tmp/useri_sursa.txt) pe sursa, $(wc -l < /tmp/useri_dest.txt) pe destinatie"
+        colecteaza_grupuri "$SURSA" > /tmp/grupuri_sursa.txt
+        colecteaza_grupuri "$DESTINATIE" > /tmp/grupuri_dest.txt
     fi
 
-    info "Colectare finalizata."
+    # --- AFISAREA DIFERENTELOR (CF-09, CF-10) ---
+    info "Calculez diferentele..."
+    if categorie_activa pachete; then
+        afiseaza_diferente "PACHETE" /tmp/pachete_sursa.txt /tmp/pachete_dest.txt
+    fi
+    if categorie_activa utilizatori; then
+        afiseaza_diferente "GRUPURI" /tmp/grupuri_sursa.txt /tmp/grupuri_dest.txt
+        afiseaza_diferente "UTILIZATORI" /tmp/useri_sursa.txt /tmp/useri_dest.txt
+    fi
+
+    # --- INTEROGAREA (CF-11) ---
+    echo
+    if ! confirma "Aplic clonarea? Destinatia va deveni identica cu sursa."; then
+        info "Clonare anulata de utilizator. Niciun sistem nu a fost modificat."
+        exit 0
+    fi
+
+    # --- APLICAREA (CF-12..CF-21), in ordinea din CF-18 ---
+    if categorie_activa utilizatori; then
+        info "--- Aplic grupurile ---"
+        aplica_grupuri /tmp/grupuri_sursa.txt /tmp/grupuri_dest.txt
+        info "--- Aplic utilizatorii (passwd + shadow in bloc) ---"
+        aplica_utilizatori /tmp/useri_sursa.txt /tmp/useri_dest.txt
+    fi
+
+    if categorie_activa home; then
+        info "--- Transfer home-directory-urile ---"
+        while IFS= read -r user; do
+            [ -z "$user" ] && continue
+            aplica_home "$user"
+        done < <(diff_lipsa /tmp/useri_sursa.txt /tmp/useri_dest.txt)
+    fi
+
+    if categorie_activa pachete; then
+        info "--- Aplic pachetele ---"
+        aplica_pachete /tmp/pachete_sursa.txt /tmp/pachete_dest.txt
+    fi
+
+    if categorie_activa cron; then
+        info "--- Recreez cronjob-urile ---"
+        while IFS= read -r user; do
+            [ -z "$user" ] && continue
+            aplica_cronjoburi "$user"
+        done < /tmp/useri_sursa.txt
+    fi
+
+    info "=== Clonare finalizata ==="
 }
 
 main "$@"
