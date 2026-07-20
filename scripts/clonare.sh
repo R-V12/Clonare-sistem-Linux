@@ -139,12 +139,19 @@ main() {
         exit 0
     fi
 
-    # --- APLICAREA (CF-12..CF-21), in ordinea din CF-18 ---
+    # --- APLICAREA (CF-12..CF-21) ---
+    # Ordinea corecta: intai stergem (useri, apoi grupuri), ca sa eliberam
+    # UID/GID-urile, apoi cream (grupuri, apoi useri), ca noii useri sa
+    # primeasca exact UID/GID-urile de pe sursa.
     if categorie_activa utilizatori; then
-        info "--- Aplic grupurile ---"
-        aplica_grupuri /tmp/grupuri_sursa.txt /tmp/grupuri_dest.txt
-        info "--- Aplic utilizatorii (passwd + shadow in bloc) ---"
-        aplica_utilizatori /tmp/useri_sursa.txt /tmp/useri_dest.txt
+        info "--- Sterg utilizatorii in plus ---"
+        sterge_utilizatori /tmp/useri_sursa.txt /tmp/useri_dest.txt
+        info "--- Sterg grupurile in plus ---"
+        sterge_grupuri /tmp/grupuri_sursa.txt /tmp/grupuri_dest.txt
+        info "--- Creez grupurile lipsa ---"
+        creaza_grupuri /tmp/grupuri_sursa.txt /tmp/grupuri_dest.txt
+        info "--- Creez utilizatorii lipsa (passwd + shadow in bloc) ---"
+        creaza_utilizatori /tmp/useri_sursa.txt /tmp/useri_dest.txt
     fi
 
     if categorie_activa home; then

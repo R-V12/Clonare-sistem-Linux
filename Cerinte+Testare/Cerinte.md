@@ -1,26 +1,32 @@
-# DOCUMENT DE CERINȚE - Clonare sistem Linux
+# DOCUMENT DE CERINȚE SOFTWARE
 
-Sd. Cap. Vlădescu Rareș - C 112-C
+## Clonare sistem Linux
 
+Student: Vlădescu Rareș
 
-Tema Proiect: Clonare sistem Linux
+Proiect: Clonare sistem Linux
 
-
-Repo: https://github.com/R-V12/Clonare-sistem-Linux
-
-
+Repository: https://github.com/R-V12/Clonare-sistem-Linux
 
 # Capitolul 1: Introducere
 
 ## 1.1 Scopul proiectului
 
 Aplicația este o colecție de scripturi Bash care replică starea unui sistem Linux
-(sursă) pe alt sistem Linux (destinație). Scriptul se poate rula de pe oricare
+(**sursă**) pe alt sistem Linux (**destinație**). Scriptul se poate rula de pe oricare
 dintre cele două sisteme. El colectează starea ambelor mașini, calculează diferențele,
 le afișează și, numai după confirmarea utilizatorului, aplică modificările pe destinație.
 
+Clonarea este completă și indivizibilă: destinația devine identică cu sursa. Elementele
+lipsă sunt create, cele cu conținut diferit sunt suprascrise, cele prezente doar pe
+destinație sunt șterse, iar cele identice sunt păstrate neatinse. Utilizatorul nu selectează
+ce se clonează; el confirmă sau anulează clonarea în întregime.
+
 Elementele care se pot clona: pachetele instalate, utilizatorii și grupurile, fișierele
 din home-directory-uri, fișierele din directoare specificate și cronjob-urile.
+
+Clonarea vizează configurația sistemului (utilizatori, pachete, fișiere din locațiile
+specificate, cronjob-uri), nu sistemul de operare al destinației, care rămâne neatins.
 
 Transferul se face prin SSH și rsync. Nicio modificare nu se aplică fără confirmare, iar
 toate acțiunile se înregistrează într-un jurnal.
@@ -32,8 +38,9 @@ evidența pachetelor instalate, `apt` rezolvă dependențele.
 
 **Bash** — interpretorul în care sunt scrise scripturile.
 
-**Clonare** — replicarea configurației (utilizatori, pachete, fișiere, cronjob-uri) de pe
-sursă pe destinație. Nu se referă la copierea sistemului de operare.
+**Clonare** — aducerea destinației în aceeași stare ca sursa: se creează ce lipsește, se
+suprascrie ce diferă, se șterge ce există doar pe destinație, se păstrează ce e identic.
+Vizează configurația (utilizatori, pachete, fișiere, cronjob-uri), nu sistemul de operare.
 
 **Cronjob** — sarcină programată prin `cron`, vizibilă cu `crontab -l`.
 
@@ -72,14 +79,14 @@ hash-urile parolelor și grupurile.
 
 ## 2.1 Fluxul aplicației
 
-1. Citirea configurației (mod de rulare, adresa celeilalte mașini, categorii)
-2. Stabilirea conexiunii SSH
-3. Colectarea stării de pe ambele sisteme
-4. Compararea listelor de pe cele doua sisteme
-5. Afișarea rezultatelor, pe categorii
-6. Interogarea utilizatorului, pe categorii
-7. Aplicarea modificărilor confirmate
-8. Jurnalizarea/Noteaza intr-un fisier ce a facut pe parcursul intregului script
+1. Citirea configurației (mod de rulare, adresa celeilalte mașini, categorii).
+2. Stabilirea conexiunii SSH.
+3. Colectarea stării de pe ambele sisteme.
+4. Calculul diferențelor.
+5. Afișarea diferențelor.
+6. Interogarea utilizatorului, pe categorii.
+7. Aplicarea modificărilor confirmate.
+8. Jurnalizarea.
 
 ## 2.2 Ordinea operațiilor
 
@@ -93,29 +100,42 @@ hash-urile parolelor și grupurile.
 
 Diferențele se calculează în ambele direcții și rezultă trei categorii:
 
-* **lipsă pe destinație** — pot fi clonate;
-* **doar pe destinație** — pot fi șterse;
-* **comune** — nu se recreează; diferențele de atribute se raportează.
+* **lipsă pe destinație** — se creează;
+* **doar pe destinație** — se șterg;
+* **identice pe ambele** — se păstrează neatinse;
+* **prezente pe ambele, cu conținut diferit** — se suprascriu cu versiunea de pe sursă.
 
-Ex: pentru sursa cu `user1, user2, user3` si destinatie cu `user1, user2, user4`:
+Diferențele se afișează integral, apoi aplicația cere o singură confirmare pentru întreaga
+clonare. Utilizatorul nu selectează categorii: confirmă aplicarea tuturor modificărilor sau
+anulează operația. Pentru conturi, diferențele de atribute (UID, shell, grupuri) se
+raportează, dar conturile comune nu se modifică.
+
+Exemplu, pentru sursă cu `user1, user2, user3` și destinație cu `user1, user2, user4`:
 
 ```
-Diferente utilizatori:
-  Lipsa pe destinatie:  user3
-  Doar pe destinatie:   user4
+Diferențe utilizatori:
+  Lipsă pe destinație:  user3
+  Doar pe destinație:   user4
   Comuni:               user1, user2
 
-Clonez utilizatorii lipsa? [d/n] d
-Sterg utilizatorii care exista doar pe destinatie? [d/n] n
+Aplic clonarea? [d/n] d
 
-Se creeaza: user3
-user4: pastrat (refuzat de utilizator)
-user1, user2: existenti, nemodificati
+Se creează: user3
+Se șterge:  user4
+user1, user2: existenți, nemodificați
 ```
-## 2.4 Platforma și mediul de lucru
+
+## 2.4 Exemple de utilizare
+
+```
+./scripts/clonare.sh --mod sursa --tinta 192.168.56.20 --user rares
+./scripts/clonare.sh --config config/clonare.conf
+```
+
+## 2.5 Platforma și mediul de lucru
 
 Aplicația rulează pe Linux Mint (bazat pe Debian). Utilitare folosite: Bash, coreutils,
-`useradd`/`groupadd`/`chpasswd`/`getent`, `dpkg`/`apt`, `ssh`, `rsync`, `crontab`.
+`getent`, `groupadd`, `usermod`, `userdel`, `dpkg`/`apt`, `ssh`, `rsync`, `crontab`.
 
 Sunt necesare două mașini virtuale Linux Mint (sursă și destinație), conectate în rețea
 (Host-Only sau Internal Network), cu SSH configurat pe bază de chei.
@@ -124,8 +144,9 @@ Sunt necesare două mașini virtuale Linux Mint (sursă și destinație), conect
 sudo apt install -y git openssh-server openssh-client rsync
 ssh-keygen -t ed25519
 ssh-copy-id user@ip_destinatie
-ssh user@ip_destinatie "hostname"
+ssh user@ip_destinatie "hostname"    # verificare: trebuie să răspundă fără parolă
 ```
+
 ## 2.6 Constrângeri
 
 **Date.** Citirea utilizatorilor și a hash-urilor din `/etc/shadow` necesită root pe sursă.
@@ -137,7 +158,8 @@ Parametrii din linia de comandă au prioritate față de fișierul de configurar
 operațiilor din 2.2 trebuie respectată.
 
 **Tehnologice.** Implementare în Bash. Transfer prin SSH și rsync. Pachete prin `apt`.
-Comparare fișiere prin sume de control. Utilizatori prin `useradd`, grupuri prin `groupadd`.
+Comparare fișiere prin sume de control. Utilizatori prin prelucrarea în bloc a fișierelor
+`/etc/passwd` și `/etc/shadow`, grupuri prin `groupadd`.
 
 **Securitate.** Operațiile privilegiate se execută cu `sudo`. Hash-urile de parolă nu se
 afișează și nu se scriu în jurnal. Autentificarea SSH se face pe bază de chei.
@@ -201,7 +223,7 @@ Aplicația identifică fișierele din home-directory-uri și din directoarele sp
 
 Aplicația extrage cronjob-urile utilizatorilor (`crontab -l`).
 
-### CF-09 – Calculul diferențelor/Identificarea clara a
+### CF-09 – Calculul diferențelor
 
 Pentru fiecare categorie, aplicația determină: elementele prezente pe sursă și absente pe
 destinație, elementele prezente pe destinație și absente pe sursă, elementele comune.
@@ -218,15 +240,19 @@ informativ.
 
 ### CF-11 – Interogarea utilizatorului
 
-Aplicația întreabă utilizatorul, pe fiecare categorie, dacă dorește clonarea elementelor
-lipsă și, separat, dacă dorește ștergerea elementelor prezente doar pe destinație.
-Confirmarea unei categorii acoperă toate operațiile din acea categorie. Refuzul unei
-categorii nu afectează procesarea celorlalte.
+După afișarea diferențelor, aplicația cere o singură confirmare pentru întreaga clonare.
+Utilizatorul nu selectează ce anume se clonează: la confirmare se aplică toate modificările
+afișate (creări, suprascrieri, ștergeri), iar destinația devine identică cu sursa; la refuz
+nu se execută nicio modificare, iar aplicația se oprește.
+
+Confirmarea este obligatorie. Nicio operație de scriere sau de ștergere nu se execută
+înainte de ea.
 
 ### CF-12 – Clonarea pachetelor
 
-Pachetele lipsă și confirmate se instalează prin `apt`, care rezolvă automat dependențele.
-Pachetele deja instalate se sar.
+Pachetele lipsă se instalează prin `apt`, care rezolvă automat dependențele.
+Pachetele deja instalate se sar. Pachetele prezente doar pe destinație se dezinstalează
+(CF-21).
 
 ### CF-13 – Clonarea grupurilor
 
@@ -234,17 +260,23 @@ Grupurile lipsă se creează cu `groupadd`, înaintea utilizatorilor care le fol
 
 ### CF-14 – Clonarea utilizatorilor
 
-Utilizatorii lipsă și confirmați se creează cu `useradd`, cu același UID, grup principal,
-home-directory, shell și grupuri secundare ca pe sursă.
+Utilizatorii se clonează prelucrând fișierele `/etc/passwd` și `/etc/shadow` în bloc, nu
+cont cu cont. Pentru fiecare utilizator lipsă pe destinație se preia linia corespunzătoare
+din `/etc/passwd` (nume, UID, GID, home, shell) și linia din `/etc/shadow` (hash-ul
+parolei) de pe sursă, iar acestea se adaugă în fișierele destinației.
 
-UID-ul se impune explicit (`useradd -u`), deoarece un UID alocat automat ar diferi de cel
-de pe sursă, iar fișierele transferate ar ajunge cu proprietar greșit. Grupurile secundare
-se aplică la creare (`useradd -G`), pentru ca și drepturile contului să fie clonate.
+Prin această metodă, contul și parola sunt clonate împreună, cu exact aceleași valori ca
+pe sursă (inclusiv UID-ul), astfel încât utilizatorul se poate autentifica pe destinație
+cu aceeași parolă. Sistemul nu stochează parola în clar, ci doar hash-ul ei; transferul
+liniei din `/etc/shadow` este singura modalitate de a păstra parola.
 
-Parola se preia sub forma hash-ului din `/etc/shadow` și se aplică cu `chpasswd -e`.
-Sistemul nu stochează parola în clar, ci doar hash-ul ei, deci transferul hash-ului este
-singura modalitate prin care contul clonat păstrează parola de pe sursă. Necesită root pe
-ambele sisteme.
+Se prelucrează numai liniile utilizatorilor reali (UID ≥ 1000). Conturile de sistem
+(UID < 1000) nu sunt atinse, deoarece aparțin sistemului de operare al fiecărei mașini și
+sunt recreate automat de `apt` odată cu pachetele care le folosesc. Înainte de modificare,
+`/etc/passwd` și `/etc/shadow` de pe destinație sunt salvate într-o copie de siguranță.
+
+Grupurile secundare ale utilizatorului se aplică separat, după adăugarea contului.
+Operația necesită privilegii de root pe ambele sisteme.
 
 ### CF-15 – Transferul home-directory-urilor
 
@@ -273,9 +305,10 @@ Clonarea se aplică în ordinea: grupuri → utilizatori → fișiere → pachet
 Elementele existente pe destinație nu se recreează. Conturile de utilizator nu se
 suprascriu niciodată — sunt doar create, șterse sau lăsate neatinse.
 
-Pentru fișiere, în categoriile confirmate: fișierele identice se sar, cele lipsă se
-copiază, iar cele care există pe ambele cu conținut diferit se suprascriu cu versiunea de
-pe sursă.
+Pentru fișiere: cele identice cu sursa (aceeași sumă de control) se păstrează neatinse și
+nu se retransferă, cele lipsă se copiază, cele care există pe ambele cu conținut diferit se
+suprascriu cu versiunea de pe sursă, iar cele prezente doar pe destinație se șterg
+(`rsync --delete`).
 
 ### CF-20 – Raportarea diferențelor pentru elementele comune
 
@@ -289,21 +322,27 @@ nume.
 
 ### CF-21 – Ștergerea elementelor prezente doar pe destinație
 
-Elementele prezente pe destinație dar nu pe sursă (utilizatori, grupuri, cronjob-uri,
-fișiere din directoarele specificate) se detectează și se afișează. Aplicația întreabă dacă
-utilizatorul dorește ștergerea lor. La confirmare, se șterg și destinația devine identică
-cu sursa în categoria respectivă. La refuz, rămân neatinse.
+Elementele prezente pe destinație dar nu pe sursă — utilizatori, grupuri, pachete,
+cronjob-uri, fișiere din home-directory-uri și din directoarele specificate — se detectează,
+se afișează și se șterg la confirmarea clonării. Astfel, destinația devine identică cu
+sursa.
 
-Restricții obligatorii la ștergerea utilizatorilor:
+Ștergerea se realizează cu: `userdel -r` pentru utilizatori, `groupdel` pentru grupuri,
+`apt remove` pentru pachete, `crontab` pentru cronjob-uri și `rsync --delete` pentru
+fișiere.
 
-* nu se șterg conturile de sistem (UID < 1000);
-* nu se șterge utilizatorul prin care e stabilită conexiunea SSH;
-* nu se șterge utilizatorul care execută scriptul.
+**Restricții obligatorii la ștergerea utilizatorilor.** Nu se șterg conturile de sistem
+(UID < 1000), utilizatorul prin care e stabilită conexiunea SSH și utilizatorul care execută
+scriptul. Ștergerea acestora ar întrerupe conexiunea sau execuția scriptului, lăsând
+destinația într-o stare inconsistentă.
 
-Pachetele nu fac obiectul ștergerii. Un pachet prezent doar pe destinație se raportează,
-dar nu se dezinstalează: pachetele nu sunt independente între ele, iar dezinstalarea unuia
-poate elimina prin dependențe alte pachete de care sistemul are nevoie. Utilizatorii nu
-prezintă acest risc, fiecare cont fiind independent.
+**Restricții obligatorii la ștergerea pachetelor.** Se dezinstalează numai pachete din lista
+de pachete instalate manual. Înainte de dezinstalare, aplicația determină cu
+`apt remove --dry-run` lista completă a pachetelor care ar fi eliminate prin dependențe și o
+afișează utilizatorului. Dacă lista conține pachete esențiale sau pachete care nu apar în
+diferența calculată, dezinstalarea acelui pachet este raportată și sărită. Motivul: pachetele
+nu sunt independente între ele, iar dezinstalarea unuia poate elimina în cascadă componente
+de care sistemul destinație are nevoie.
 
 ### CF-22 – Pachete indisponibile
 
@@ -328,10 +367,7 @@ privilegiilor, comandă externă indisponibilă, opțiune necunoscută, conflict
 
 Scripturile returnează `0` la succes și un cod diferit de `0` la eșec.
 
-
-
 ## 3.2 Cerințe nefuncționale
-
 
 ### CNF-01 – Compatibilitate
 Aplicația rulează pe o distribuție Linux bazată pe Debian (platformă de test: Linux Mint).
@@ -351,18 +387,49 @@ ca atare.
 Autentificare SSH pe bază de chei. Operațiile privilegiate cu `sudo`. Hash-urile de parolă
 nu se afișează și nu se scriu în jurnal. Parolele nu se scriu în cod.
 
-### CNF-6 – Mesaje de eroare
+### CNF-06 – Idempotență
+Pentru aceeași stare a celor două sisteme, aplicația identifică aceleași diferențe. După o
+clonare completă, o a doua rulare nu mai găsește diferențe și nu execută nicio modificare.
+
+### CNF-07 – Gestionarea căilor
+Scripturile procesează corect căile cu spații și caractere speciale. Variabilele cu căi se
+folosesc între ghilimele.
+
+### CNF-08 – Portabilitate
+Fără căi fixe specifice unei mașini. Adresele, utilizatorii și directoarele se configurează
+dinamic.
+
+### CNF-09 – Ușurința utilizării
+Parametri cu nume descriptive. Mesaje despre progresul operației.
+
+### CNF-10 – Mesaje de eroare
 Mesajele indică operația eșuată, elementul implicat și cauza probabilă.
 
-### CNF-7 – Jurnalizare
-Format ușor de citit, cu dată, oră și nivel in fisier (`INFO`, `WARNING`, `ERROR`).
+### CNF-11 – Jurnalizare
+Format ușor de citit, cu dată, oră și nivel (`INFO`, `WARNING`, `ERROR`).
 
-### CNF-8 – Configurabilitate
+### CNF-12 – Configurabilitate
 Fiecare categorie poate fi activată sau dezactivată:
 
-```
+```text
 CLONE_PACHETE=true
 CLONE_UTILIZATORI=true
 CLONE_HOME=true
 CLONE_CRON=true
 ```
+
+### CNF-13 – Siguranța operațiilor
+Operațiile de scriere, creare sau ștergere se execută numai asupra unor căi și valori
+validate, niciodată asupra unor variabile vide.
+
+### CNF-14 – Controlul versiunilor
+Codul se păstrează în Git, cu commituri descriptive.
+
+### CNF-15 – Documentare
+Repository-ul conține un `README.md` cu scopul proiectului, dependențele, exemplele de
+utilizare și limitările cunoscute.
+
+### CNF-16 – Protejarea datelor existente
+Aplicația nu suprascrie și nu șterge automat fișiere, utilizatori sau configurări de pe
+destinație. Toate modificările sunt afișate în prealabil și se execută numai după
+confirmarea explicită a utilizatorului. La refuz, niciun sistem nu e modificat.
