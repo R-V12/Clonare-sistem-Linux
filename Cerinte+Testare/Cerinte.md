@@ -147,6 +147,14 @@ ssh-copy-id user@ip_destinatie
 ssh user@ip_destinatie "hostname"    # verificare: trebuie să răspundă fără parolă
 ```
 
+Pe ambele mașini, contul folosit trebuie să poată rula `sudo` fără parolă (necesar pentru
+operațiile privilegiate executate prin SSH):
+
+```bash
+echo "utilizator ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/clonare
+sudo chmod 440 /etc/sudoers.d/clonare
+```
+
 ## 2.6 Constrângeri
 
 **Date.** Citirea utilizatorilor și a hash-urilor din `/etc/shadow` necesită root pe sursă.
@@ -201,8 +209,14 @@ celeilalte mașini, categoriile de clonat, directoarele suplimentare, locația j
 
 ### CF-04 – Conexiunea SSH
 
-Aplicația se conectează prin SSH cu autentificare pe bază de chei. Dacă conexiunea
-eșuează, aplicația se oprește.
+Aplicația se conectează prin SSH cu autentificare pe bază de chei, în ambele direcții
+(sursă → destinație și destinație → sursă), astfel încât să poată rula în oricare mod.
+Dacă conexiunea eșuează, aplicația se oprește.
+
+Deoarece operațiile de scriere de pe cealaltă mașină necesită privilegii, contul folosit
+pentru SSH trebuie să poată executa `sudo` fără parolă interactivă: o comandă `sudo`
+rulată printr-o sesiune SSH neinteractivă nu poate citi o parolă de la tastatură.
+Configurarea acestui drept face parte din pregătirea mediului.
 
 ### CF-05 – Colectarea pachetelor
 
@@ -277,6 +291,12 @@ sunt recreate automat de `apt` odată cu pachetele care le folosesc. Înainte de
 
 Grupurile secundare ale utilizatorului se aplică separat, după adăugarea contului.
 Operația necesită privilegii de root pe ambele sisteme.
+
+Ordinea operațiilor este esențială pentru corectitudinea identificatorilor: mai întâi se
+șterg utilizatorii și grupurile prezente doar pe destinație, eliberând UID-urile și
+GID-urile, apoi se creează grupurile și utilizatorii de pe sursă, care primesc astfel
+exact aceiași UID și GID. Fără această ordine, un identificator încă ocupat ar forța
+alocarea altuia, iar contul clonat ar indica un grup greșit.
 
 ### CF-15 – Transferul home-directory-urilor
 
