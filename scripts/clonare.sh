@@ -71,9 +71,9 @@ citeste_config() {
 }
 
 valideaza() {
-    [ -n "$MOD" ]      || opreste "--mod este obligatoriu. Vezi --help."
-    [ -n "$TINTA" ]    || opreste "--tinta este obligatoriu. Vezi --help."
-    [ -n "$USER_SSH" ] || opreste "--user este obligatoriu. Vezi --help."
+   [ -n "$MOD" ]      || opreste "Parametrul --mod este obligatoriu. Vezi --help."
+   [ -n "$TINTA" ]    || opreste "Parametrul --tinta este obligatoriu. Vezi --help."
+   [ -n "$USER_SSH" ] || opreste "Parametrul --user este obligatoriu. Vezi --help."
     if [ "$MOD" != "sursa" ] && [ "$MOD" != "destinatie" ]; then
         opreste "Valoare invalida pentru --mod: '$MOD'. Valori acceptate: sursa | destinatie"
     fi

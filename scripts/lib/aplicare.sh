@@ -33,6 +33,9 @@ sterge_grupuri() {
 
     while IFS= read -r grup; do
         [ -z "$grup" ] && continue
+        if ! ruleaza "$DESTINATIE" getent group "$grup" >/dev/null 2>&1; then
+            continue
+        fi
         info "Sterg grupul $grup de pe destinatie"
         ruleaza_sudo "$DESTINATIE" groupdel "$grup" 2>/dev/null \
             || atentie "Grupul $grup nu a putut fi sters"
