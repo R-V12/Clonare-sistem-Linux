@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# --- STERGERI ---
-
+# Sterge de pe destinatie utilizatorii care nu exista pe sursa.
+# Nu se sterg contul root si utilizatorul prin care e stabilita conexiunea SSH,
+# deoarece stergerea lor ar intrerupe executia clonarii.
 sterge_utilizatori() {
     local f_sursa="$1"
     local f_dest="$2"
@@ -26,6 +27,9 @@ sterge_utilizatori() {
     done
 }
 
+# Sterge de pe destinatie grupurile care nu exista pe sursa.
+# Grupurile principale ale utilizatorilor sunt deja eliminate de userdel,
+# deci se verifica intai daca grupul mai exista.
 sterge_grupuri() {
     local f_sursa="$1"
     local f_dest="$2"
@@ -44,8 +48,7 @@ sterge_grupuri() {
     done
 }
 
-# --- CREARI ---
-
+# Creeaza pe destinatie grupurile de pe sursa, pastrand acelasi GID.
 creaza_grupuri() {
     local f_sursa="$1"
     local f_dest="$2"
@@ -68,6 +71,11 @@ creaza_grupuri() {
     done
 }
 
+# Cloneaza utilizatorii prelucrand in bloc fisierele /etc/passwd si /etc/shadow:
+# linia din passwd (nume, UID, GID, home, shell) si linia din shadow (hash-ul
+# parolei) se preiau de pe sursa si se adauga in fisierele destinatiei. Astfel
+# contul si parola sunt clonate impreuna, iar utilizatorul se poate autentifica
+# pe destinatie cu aceeasi parola.
 creaza_utilizatori() {
     local f_sursa="$1"
     local f_dest="$2"
@@ -109,8 +117,10 @@ creaza_utilizatori() {
     done
 }
 
-# --- FISIERE / HOME ---
-
+# Transfera home-directory-ul unui utilizator cu rsync peste SSH, pastrand
+# permisiunile si proprietarul. Optiunea --delete elimina de pe destinatie
+# fisierele care nu exista pe sursa, iar --rsync-path ruleaza rsync cu drepturi
+# de root pe partea remote, pentru a putea scrie in home.
 aplica_home() {
     local user="$1"
     local home_sursa home_dest
@@ -136,8 +146,10 @@ aplica_home() {
     ruleaza_sudo "$DESTINATIE" chown -R "$user:$user" "$home_dest" 2>/dev/null || true
 }
 
-# --- PACHETE ---
-
+# Instaleaza pe destinatie pachetele prezente doar pe sursa si dezinstaleaza
+# pachetele prezente doar pe destinatie. Inainte de dezinstalare se verifica,
+# cu apt-get remove --dry-run, cate pachete ar fi eliminate prin dependente;
+# daca ar cadea si altele in afara diferentei calculate, operatia este sarita.
 aplica_pachete() {
     local f_sursa="$1"
     local f_dest="$2"
@@ -178,8 +190,7 @@ aplica_pachete() {
     fi
 }
 
-# --- CRONJOB-URI ---
-
+# Recreeaza pe destinatie cronjob-urile unui utilizator, dupa ce contul exista.
 aplica_cronjoburi() {
     local user="$1"
     local cron_sursa

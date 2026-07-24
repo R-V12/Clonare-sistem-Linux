@@ -1,17 +1,29 @@
 #!/bin/bash
 
+# Compararea se face cu utilitarul comm, care primeste doua liste sortate si le
+# imparte in trei coloane: elementele prezente doar in prima lista, cele
+# prezente doar in a doua si cele comune. Cifrele din optiuni indica ce coloane
+# sunt ascunse, astfel incat sa ramana doar cea dorita.
+
+# Elementele prezente pe sursa si absente pe destinatie: cele care trebuie
+# create.
 diff_lipsa() {
     comm -23 "$1" "$2"
 }
 
+# Elementele prezente pe destinatie si absente pe sursa: cele care trebuie
+# sterse.
 diff_in_plus() {
     comm -13 "$1" "$2"
 }
 
+# Elementele prezente pe ambele sisteme.
 diff_comune() {
     comm -12 "$1" "$2"
 }
 
+# Afiseaza diferentele dintr-o categorie, marcand cu + elementele de adaugat si
+# cu - pe cele de sters. Pasul este strict informativ: nu modifica nimic.
 afiseaza_diferente() {
     local titlu="$1"
     local f_sursa="$2"
@@ -37,6 +49,7 @@ afiseaza_diferente() {
     fi
 }
 
+# Verifica daca intre cele doua sisteme exista vreo diferenta intr-o categorie.
 exista_diferente() {
     local f_sursa="$1"
     local f_dest="$2"

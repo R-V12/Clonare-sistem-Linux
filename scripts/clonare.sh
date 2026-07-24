@@ -16,6 +16,7 @@ CONFIG=""
 CATEGORII="pachete,utilizatori,home,cron"
 JURNAL="$DIR_SCRIPT/../logs/clonare.log"
 
+# Afiseaza mesajul de ajutor cu parametrii disponibili si exemple de utilizare.
 ajutor() {
     cat << 'EOF'
 clonare.sh - aduce sistemul destinatie in aceeasi stare ca sistemul sursa
@@ -43,6 +44,7 @@ OBSERVATII
 EOF
 }
 
+# Citeste parametrii din linia de comanda si ii pune in variabilele globale.
 parseaza_parametri() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -57,6 +59,7 @@ parseaza_parametri() {
     done
 }
 
+# Incarca optiunile dintr-un fisier de configurare.
 citeste_config() {
     local fisier="$1"
     [ -f "$fisier" ] || opreste "Fisierul de configurare nu exista: $fisier"
@@ -70,13 +73,16 @@ citeste_config() {
     return 0
 }
 
+# Verifica parametrii inainte de orice conexiune sau modificare.
 valideaza() {
     [ -n "$MOD" ]      || opreste "Parametrul --mod este obligatoriu. Vezi --help."
     [ -n "$TINTA" ]    || opreste "Parametrul --tinta este obligatoriu. Vezi --help."
     [ -n "$USER_SSH" ] || opreste "Parametrul --user este obligatoriu. Vezi --help."
+
     if [ "$MOD" != "sursa" ] && [ "$MOD" != "destinatie" ]; then
         opreste "Valoare invalida pentru --mod: '$MOD'. Valori acceptate: sursa | destinatie"
     fi
+
     if ! echo "$TINTA" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'; then
         opreste "Adresa invalida pentru --tinta: '$TINTA'. Se asteapta o adresa IPv4 de forma x.x.x.x, exemplu: 192.168.56.102"
     fi
@@ -89,6 +95,8 @@ valideaza() {
     done
 }
 
+# Stabileste care sistem este local si care remote, in functie de modul de rulare.
+# Dupa acest pas, restul codului foloseste doar $SURSA si $DESTINATIE.
 stabileste_rolurile() {
     if [ "$MOD" = "sursa" ]; then
         SURSA="local"; DESTINATIE="remote"
@@ -98,6 +106,7 @@ stabileste_rolurile() {
     info "Mod: $MOD  (sursa=$SURSA, destinatie=$DESTINATIE)"
 }
 
+# Verifica daca o categorie a fost selectata pentru clonare.
 categorie_activa() {
     echo "$CATEGORII" | tr ',' '\n' | grep -qx "$1"
 }
@@ -117,7 +126,7 @@ main() {
     verifica_comanda "$SURSA" rsync
     verifica_comanda "$DESTINATIE" rsync
 
-    # --- COLECTARE (CF-05..CF-08) ---
+    # Colectarea starii de pe ambele sisteme
     if categorie_activa pachete; then
         colecteaza_pachete "$SURSA" > /tmp/pachete_sursa.txt
         colecteaza_pachete "$DESTINATIE" > /tmp/pachete_dest.txt
@@ -129,7 +138,7 @@ main() {
         colecteaza_grupuri "$DESTINATIE" > /tmp/grupuri_dest.txt
     fi
 
-    # --- AFISAREA DIFERENTELOR (CF-09, CF-10) ---
+    # Calculul si afisarea diferentelor
     info "Calculez diferentele..."
     if categorie_activa pachete; then
         afiseaza_diferente "PACHETE" /tmp/pachete_sursa.txt /tmp/pachete_dest.txt
@@ -139,17 +148,16 @@ main() {
         afiseaza_diferente "UTILIZATORI" /tmp/useri_sursa.txt /tmp/useri_dest.txt
     fi
 
-    # --- INTEROGAREA (CF-11) ---
+    # Confirmarea utilizatorului, inainte de orice modificare
     echo
     if ! confirma "Aplic clonarea? Destinatia va deveni identica cu sursa."; then
         info "Clonare anulata de utilizator. Niciun sistem nu a fost modificat."
         exit 0
     fi
 
-    # --- APLICAREA (CF-12..CF-21) ---
-    # Ordinea corecta: intai stergem (useri, apoi grupuri), ca sa eliberam
-    # UID/GID-urile, apoi cream (grupuri, apoi useri), ca noii useri sa
-    # primeasca exact UID/GID-urile de pe sursa.
+    # Ordinea de aplicare: intai se sterg utilizatorii si grupurile in plus,
+    # eliberand UID-urile si GID-urile, apoi se creeaza cele de pe sursa,
+    # care primesc astfel exact aceiasi identificatori.
     if categorie_activa utilizatori; then
         info "--- Sterg utilizatorii in plus ---"
         sterge_utilizatori /tmp/useri_sursa.txt /tmp/useri_dest.txt
@@ -161,12 +169,18 @@ main() {
         creaza_utilizatori /tmp/useri_sursa.txt /tmp/useri_dest.txt
     fi
 
+    # Home-directory-urile se transfera dupa crearea utilizatorilor, ca
+    # proprietarul fisierelor sa poata fi aplicat corect.
+    # Lista se incarca intr-un tablou, pentru ca ssh consuma intrarea standard
+    # si ar intrerupe o bucla care citeste direct de la ea.
     if categorie_activa home; then
         info "--- Transfer home-directory-urile ---"
-        while IFS= read -r user; do
+        local user
+        mapfile -t useri_noi < <(diff_lipsa /tmp/useri_sursa.txt /tmp/useri_dest.txt)
+        for user in "${useri_noi[@]}"; do
             [ -z "$user" ] && continue
             aplica_home "$user"
-        done < <(diff_lipsa /tmp/useri_sursa.txt /tmp/useri_dest.txt)
+        done
     fi
 
     if categorie_activa pachete; then
@@ -174,12 +188,15 @@ main() {
         aplica_pachete /tmp/pachete_sursa.txt /tmp/pachete_dest.txt
     fi
 
+    # Cronjob-urile se recreeaza la final, dupa ce utilizatorii exista.
     if categorie_activa cron; then
         info "--- Recreez cronjob-urile ---"
-        while IFS= read -r user; do
-            [ -z "$user" ] && continue
-            aplica_cronjoburi "$user"
-        done < /tmp/useri_sursa.txt
+        local u
+        mapfile -t toti_userii < /tmp/useri_sursa.txt
+        for u in "${toti_userii[@]}"; do
+            [ -z "$u" ] && continue
+            aplica_cronjoburi "$u"
+        done
     fi
 
     info "=== Clonare finalizata ==="
