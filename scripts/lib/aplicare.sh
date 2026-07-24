@@ -8,7 +8,8 @@ sterge_utilizatori() {
     local de_sters user
     de_sters=$(diff_in_plus "$f_sursa" "$f_dest")
 
-    while IFS= read -r user; do
+    mapfile -t lista_useri <<< "$de_sters"
+    for user in "${lista_useri[@]}"; do
         [ -z "$user" ] && continue
         if [ "$user" = "$USER_SSH" ]; then
             atentie "Utilizatorul $user este cel conectat prin SSH - NU se sterge (protectie)"
@@ -22,7 +23,7 @@ sterge_utilizatori() {
         ruleaza_sudo "$DESTINATIE" pkill -u "$user" 2>/dev/null || true
         ruleaza_sudo "$DESTINATIE" userdel -r "$user" 2>/dev/null \
             || atentie "Utilizatorul $user nu a putut fi sters complet"
-    done <<< "$de_sters"
+    done
 }
 
 sterge_grupuri() {
@@ -31,7 +32,8 @@ sterge_grupuri() {
     local de_sters grup
     de_sters=$(diff_in_plus "$f_sursa" "$f_dest")
 
-    while IFS= read -r grup; do
+    mapfile -t lista_grupuri <<< "$de_sters"
+    for grup in "${lista_grupuri[@]}"; do
         [ -z "$grup" ] && continue
         if ! ruleaza "$DESTINATIE" getent group "$grup" >/dev/null 2>&1; then
             continue
@@ -39,7 +41,7 @@ sterge_grupuri() {
         info "Sterg grupul $grup de pe destinatie"
         ruleaza_sudo "$DESTINATIE" groupdel "$grup" 2>/dev/null \
             || atentie "Grupul $grup nu a putut fi sters"
-    done <<< "$de_sters"
+    done
 }
 
 # --- CREARI ---
@@ -50,7 +52,8 @@ creaza_grupuri() {
     local de_adaugat grup linie gid
     de_adaugat=$(diff_lipsa "$f_sursa" "$f_dest")
 
-    while IFS= read -r grup; do
+    mapfile -t lista_grupuri <<< "$de_adaugat"
+    for grup in "${lista_grupuri[@]}"; do
         [ -z "$grup" ] && continue
         linie=$(linie_grup "$SURSA" "$grup")
         gid=$(echo "$linie" | cut -d: -f3)
@@ -62,7 +65,7 @@ creaza_grupuri() {
                 || ruleaza_sudo "$DESTINATIE" groupadd "$grup" 2>/dev/null \
                 || atentie "Grupul $grup nu a putut fi creat"
         fi
-    done <<< "$de_adaugat"
+    done
 }
 
 creaza_utilizatori() {
@@ -76,7 +79,8 @@ creaza_utilizatori() {
     ruleaza_sudo "$DESTINATIE" cp /etc/passwd /etc/passwd.bak.clonare
     ruleaza_sudo "$DESTINATIE" cp /etc/shadow /etc/shadow.bak.clonare
 
-    while IFS= read -r user; do
+    mapfile -t lista_useri <<< "$de_adaugat"
+    for user in "${lista_useri[@]}"; do
         [ -z "$user" ] && continue
 
         linie_p=$(linie_passwd "$SURSA" "$user")
@@ -102,7 +106,7 @@ creaza_utilizatori() {
             ruleaza_sudo "$DESTINATIE" usermod -aG "$grupuri" "$user" 2>/dev/null \
                 || atentie "Nu am putut seta toate grupurile pentru $user"
         fi
-    done <<< "$de_adaugat"
+    done
 }
 
 # --- FISIERE / HOME ---
@@ -145,18 +149,20 @@ aplica_pachete() {
     if [ -n "$de_instalat" ]; then
         info "Instalez pachetele lipsa pe destinatie"
         ruleaza_sudo "$DESTINATIE" apt-get update -qq 2>/dev/null || true
-        while IFS= read -r pachet; do
+        mapfile -t lista_inst <<< "$de_instalat"
+        for pachet in "${lista_inst[@]}"; do
             [ -z "$pachet" ] && continue
             info "  apt install $pachet"
             ruleaza_sudo "$DESTINATIE" apt-get install -y "$pachet" >/dev/null 2>&1 \
                 && info "  $pachet instalat" \
                 || atentie "Pachetul $pachet nu a putut fi instalat"
-        done <<< "$de_instalat"
+        done
     fi
 
     if [ -n "$de_dezinstalat" ]; then
         info "Verific pachetele prezente doar pe destinatie"
-        while IFS= read -r pachet; do
+        mapfile -t lista_dez <<< "$de_dezinstalat"
+        for pachet in "${lista_dez[@]}"; do
             [ -z "$pachet" ] && continue
             cascada=$(ruleaza_sudo "$DESTINATIE" apt-get remove --dry-run "$pachet" 2>/dev/null \
                 | grep -c '^Remv' || echo 0)
@@ -168,7 +174,7 @@ aplica_pachete() {
                     && info "  $pachet dezinstalat" \
                     || atentie "Pachetul $pachet nu a putut fi dezinstalat"
             fi
-        done <<< "$de_dezinstalat"
+        done
     fi
 }
 

@@ -71,15 +71,22 @@ citeste_config() {
 }
 
 valideaza() {
-   [ -n "$MOD" ]      || opreste "Parametrul --mod este obligatoriu. Vezi --help."
-   [ -n "$TINTA" ]    || opreste "Parametrul --tinta este obligatoriu. Vezi --help."
-   [ -n "$USER_SSH" ] || opreste "Parametrul --user este obligatoriu. Vezi --help."
+    [ -n "$MOD" ]      || opreste "Parametrul --mod este obligatoriu. Vezi --help."
+    [ -n "$TINTA" ]    || opreste "Parametrul --tinta este obligatoriu. Vezi --help."
+    [ -n "$USER_SSH" ] || opreste "Parametrul --user este obligatoriu. Vezi --help."
     if [ "$MOD" != "sursa" ] && [ "$MOD" != "destinatie" ]; then
         opreste "Valoare invalida pentru --mod: '$MOD'. Valori acceptate: sursa | destinatie"
     fi
     if ! echo "$TINTA" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'; then
-        opreste "Adresa invalida pentru --tinta: '$TINTA'. Format asteptat: x.x.x.x"
+        opreste "Adresa invalida pentru --tinta: '$TINTA'. Se asteapta o adresa IPv4 de forma x.x.x.x, exemplu: 192.168.56.102"
     fi
+
+    local octet
+    for octet in ${TINTA//./ }; do
+        if [ "$octet" -gt 255 ]; then
+            opreste "Adresa invalida pentru --tinta: '$TINTA'. Fiecare numar trebuie sa fie intre 0 si 255."
+        fi
+    done
 }
 
 stabileste_rolurile() {
